@@ -181,12 +181,12 @@ def render_playground():
                 rerun()
     
     with col2:
-        st.markdown("**🟡 Intermediate (Operators)**")
+        st.markdown("**🟡 Intermediate (Operators & Refinements)**")
         refined_examples = [
             ("Diabetes excl. gestational", "<< 73211009 |Diabetes mellitus| MINUS << 11687002 |Gestational diabetes mellitus|"),
             ("Reference set members", "^ 999002381000000108 |Safeguarding issues simple reference set|"),
-            ("Medications with ibuprofen", "* : 10362801000001104 |Has specific active ingredient| = 387207008 |Ibuprofen (substance)|"),
-            ("Blood pressure codes", "<<271649006 |Systolic blood pressure| OR <<271650006 |Diastolic blood pressure|")
+            ("Viral infections", "<< 40733004 |Infectious disease| : 246075003 |Causative agent| = << 49872002 |Virus|"),
+            ("Osteoporotic fractures", "<< 125605004 |Fracture of bone| : 363698007 |Finding site| = (<< 29627003 |Neck of femur structure| OR << 75129005 |Distal radius structure|)")
         ]
         
         for name, expression in refined_examples:
@@ -195,12 +195,12 @@ def render_playground():
                 rerun()
     
     with col3:
-        st.markdown("**🔴 Advanced (Complex)**")
+        st.markdown("**🔴 Advanced (Genuinely Complex)**")
         complex_examples = [
-            ("Valproate (all forms)", "(* : 10362801000001104 |Has specific active ingredient| = 387481005 |Sodium valproate|) OR (* : 10362801000001104 |Has specific active ingredient| = 387080000 |Valproic acid|) OR (* : 10362801000001104 |Has specific active ingredient| = 5641004 |Valproate semisodium|)"),
-            ("Viral infections", "<< 40733004 |Infectious disease| : 246075003 |Causative agent| = << 49872002 |Virus|"),
-            ("Osteoporotic fractures", "<< 125605004 |Fracture of bone| : 363698007 |Finding site| = (<< 29627003 |Neck of femur structure| OR << 75129005 |Distal radius structure|)"),
-            ("Secondary hypertension", "(<< 38341003 |Hypertensive disorder| : 42752001 |Due to| = *) OR <<31992008 |Secondary hypertension|")
+            ("Body parts that can fracture", "< 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 125605004 |Fracture of bone|"),
+            ("All fracture sites (chained)", "<< 125605004 |Fracture of bone| . 363698007 |Finding site|"),
+            ("Medium-strength painkillers", "< 763158003 |Medicinal product| : 1142135004 |Has presentation strength value| >= #200, 1142135004 |Has presentation strength value| <= #600, 732945000 |Has presentation strength unit| = 258684004 |milligram|, 10362801000001104 |Has specific active ingredient| = << 387207008 |Ibuprofen|"),
+            ("Include inactive diabetes codes", "<< 73211009 |Diabetes mellitus| {{ +HISTORY-MAX }}")
         ]
         
         for name, expression in complex_examples:
@@ -271,22 +271,25 @@ def render_playground():
         ```
         """)
     
-    with st.expander("🏗️ Attribute Groups & Cardinality", expanded=False):
+    with st.expander("🏗️ Attribute Groups (Why They Matter)", expanded=False):
         st.markdown("""
-        **Attribute Groups (keeping related attributes together):**
-        
-        Curly braces `{}` group attributes that must co-occur within the same relationship group.
-        This matches how SNOMED CT models complex concepts with multiple relationship groups.
-        
-        **Example: Finding a fracture with specific characteristics**
+        **The Problem Without Groups:**
+        SNOMED concepts can have multiple relationships. Without groups, ECL can't tell which attributes go together.
+
+        **Real-World Example - Heart Problem:**
+        Imagine a patient has "Pulmonary valve stenosis with right ventricular hypertrophy"
+
+        **❌ Without groups (WRONG):**
         ```go
-        << 125605004 |Fracture of bone| :
-            { 363698007 |Finding site| = << 299701004 |Bone of forearm|,
-              116676008 |Associated morphology| = << 72704001 |Fracture| }
+        < 404684003 |Clinical finding| :
+            363698007 |Finding site| = << 39057004 |Pulmonary valve|,
+            116676008 |Associated morphology| = << 415582006 |Stenosis|,
+            363698007 |Finding site| = << 53085002 |Right ventricle|,
+            116676008 |Associated morphology| = << 56246009 |Hypertrophy|
         ```
-        This ensures the fracture morphology is specifically linked to the forearm bone site.
-        
-        **Multiple relationship groups:**
+        This could match "Pulmonary valve hypertrophy" or "Right ventricle stenosis" - WRONG!
+
+        **✅ With groups (CORRECT):**
         ```go
         < 404684003 |Clinical finding| :
             { 363698007 |Finding site| = << 39057004 |Pulmonary valve|,
@@ -294,54 +297,100 @@ def render_playground():
             { 363698007 |Finding site| = << 53085002 |Right ventricle|,
               116676008 |Associated morphology| = << 56246009 |Hypertrophy| }
         ```
-        This matches concepts that have BOTH relationship groups as modeled in SNOMED:
-        - Group 1: Pulmonary valve with stenosis
-        - Group 2: Right ventricle with hypertrophy
-        
-        Groups ensure you're matching the exact SNOMED model structure, not just the presence of attributes.
-        
-        **Cardinality (counting relationships):**
-        - `[0..1]` = Zero or one
-        - `[1..3]` = Must have between 1 and 3
-        - `[1..*]` = One or more (default)
-        - `[3..*]` = Three or more
-        
-        **Example:**
+        This only matches conditions with BOTH:
+        - Group 1: Pulmonary valve AND stenosis (linked together)
+        - Group 2: Right ventricle AND hypertrophy (linked together)
+
+        **Simple Rule:**
+        - Comma `,` = AND (within same group)
+        - Curly braces `{}` = "these attributes must be linked in SNOMED's model"
+
+        **When to Use Groups:**
+        - Multiple body sites with different problems
+        - Medications with multiple active ingredients
+        - Complex clinical conditions
+        - Any time relationships need to stay paired
+
+        **Cardinality (How Many):**
         ```go
-        < 373873005 |Pharmaceutical product| : 
-            [3..*] 127489000 |Has active ingredient| = < 105590001 |Substance|
+        < 373873005 |Pharmaceutical product| :
+            [2..5] 127489000 |Has active ingredient| = < 105590001 |Substance|
         ```
-        (Products with 3+ active ingredients)
+        *"Products with 2-5 active ingredients"*
+
+        - `[0..1]` = Optional (zero or one)
+        - `[1..3]` = Between 1 and 3
+        - `[2..*]` = Two or more
+        - `[1..*]` = One or more (default)
         """)
     
-    with st.expander("🔢 Concrete Values & Advanced Attributes", expanded=False):
+    with st.expander("🔢 Concrete Values (Numbers & Measurements)", expanded=False):
         st.markdown("""
-        **Concrete Values with Comparisons:**
+        **What are Concrete Values?**
+        Some SNOMED concepts have numerical data attached - like drug strengths, measurement ranges, or doses.
+        ECL lets you filter by these numbers using comparison operators.
+
+        **Common Use Cases:**
+
+        **1. Drug Strengths (find medications by dose range):**
         ```go
         < 763158003 |Medicinal product| :
-            1142135004 |Presentation strength value| >= #250,
-            1142135004 |Presentation strength value| <= #500,
-            732945000 |Presentation strength unit| = 258684004 |milligram|
+            1142135004 |Has presentation strength value| >= #250,
+            1142135004 |Has presentation strength value| <= #500,
+            732945000 |Has presentation strength unit| = 258684004 |milligram|
         ```
-        
-        **Comparison Operators:**
-        - `= #value` - equals
+        *"Find medications between 250-500mg strength"*
+
+        **2. Laboratory Reference Ranges:**
+        ```go
+        < 365845006 |Finding of laboratory test result| :
+            1149367008 |Has normal range low value| <= #4.0,
+            1149366004 |Has normal range high value| >= #11.0
+        ```
+        *"Find lab tests with normal ranges spanning 4.0 to 11.0"*
+
+        **All Comparison Operators:**
+        - `= #value` - exactly equals
         - `!= #value` - not equals
         - `>= #value` - greater than or equal
         - `<= #value` - less than or equal
-        - `> #value` - greater than
-        - `< #value` - less than
-        
-        **Reverse Attributes (find sources):**
+        - `> #value` - strictly greater than
+        - `< #value` - strictly less than
+
+        **💡 Pro Tip:** Always combine with unit attributes to avoid mixing mg with mcg!
+        """)
+
+    with st.expander("⚙️ Advanced Attributes (Reverse & Chained)", expanded=False):
+        st.markdown("""
+        **Reverse Attributes (R) - Find What Points TO Something:**
+
+        Normal: "Find disorders of the lung"
+        ```go
+        < 64572001 |Disease| : 363698007 |Finding site| = << 39607008 |Lung|
+        ```
+
+        Reverse: "Find body parts that can have fractures"
         ```go
         < 91723000 |Anatomical structure| :
             R 363698007 |Finding site| = < 125605004 |Fracture of bone|
         ```
-        
-        **Dotted Attributes (chaining):**
+        *"Which body parts are finding sites for fractures?"*
+
+        **Dotted Attributes (Chaining) - Follow Relationships:**
         ```go
         < 125605004 |Fracture of bone| . 363698007 |Finding site|
         ```
+        This returns the anatomical sites (not the fractures) - following the relationship chain.
+
+        **Real Example - Find All Fracture Sites:**
+        ```go
+        << 125605004 |Fracture of bone| . 363698007 |Finding site|
+        ```
+        Returns: femur, radius, tibia, etc. (the bones that can fracture)
+
+        **When to Use:**
+        - **Reverse (R)**: "What can be affected by X?" or "What causes Y?"
+        - **Dotted (.)**: "Show me the values of this attribute" or "Follow this relationship"
         """)
     
     with st.expander("🔍 Filters & History Supplements", expanded=False):
