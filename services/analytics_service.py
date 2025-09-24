@@ -313,7 +313,7 @@ def get_cluster_standardized_rates(cluster_id, cluster_type, agg_level="Borough"
             group_col = "PCN_NAME"
             group_label = "PCN"
         elif agg_level == "Borough":
-            group_col = "PRACTICE_BOROUGH"
+            group_col = "BOROUGH_REGISTERED"
             group_label = "Borough"
         else:  # Neighbourhood
             group_col = "PRACTICE_NEIGHBOURHOOD"

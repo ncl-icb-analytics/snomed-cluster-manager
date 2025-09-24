@@ -398,7 +398,7 @@ ORDER BY observation_count DESC;"""
 SELECT 
     d.practice_name,
     d.pcn_name,
-    d.practice_borough,
+    d.borough_registered,
     COUNT(DISTINCT d.person_id) as patient_count,
     COUNT(DISTINCT o.id) as total_observations,
     ROUND(AVG(d.age), 1) as avg_age,
@@ -408,7 +408,7 @@ JOIN {DB_STORE}.observation o ON ec.code = o.mapped_concept_code
 JOIN {DB_DEMOGRAPHICS}.DIM_PERSON_DEMOGRAPHICS d ON o.person_id = d.person_id
 WHERE ec.cluster_id = '{cluster_id}'
 AND d.is_active = true
-GROUP BY d.practice_name, d.pcn_name, d.practice_borough
+GROUP BY d.practice_name, d.pcn_name, d.borough_registered
 HAVING patient_count >= 5  -- Privacy threshold
 ORDER BY patient_count DESC;"""
                 st.code(query3, language='sql')
@@ -768,7 +768,7 @@ ORDER BY order_count DESC;"""
 SELECT 
     d.practice_name,
     d.pcn_name,
-    d.practice_borough,
+    d.borough_registered,
     COUNT(DISTINCT d.person_id) as patient_count,
     COUNT(DISTINCT mo.id) as total_orders,
     ROUND(AVG(d.age), 1) as avg_age,
@@ -778,7 +778,7 @@ JOIN {DB_STORE}.medication_order mo ON ec.code = mo.mapped_concept_code
 JOIN {DB_DEMOGRAPHICS}.DIM_PERSON_DEMOGRAPHICS d ON mo.person_id = d.person_id
 WHERE ec.cluster_id = '{cluster_id}'
 AND d.is_active = true
-GROUP BY d.practice_name, d.pcn_name, d.practice_borough
+GROUP BY d.practice_name, d.pcn_name, d.borough_registered
 HAVING patient_count >= 5  -- Privacy threshold
 ORDER BY patient_count DESC;"""
                 st.code(query3, language='sql')
