@@ -66,6 +66,9 @@ GRANT READ ON GIT REPOSITORY SNOMED_CLUSTER_MANAGER_REPO TO ROLE DATA_PLATFORM_M
 GRANT READ ON GIT REPOSITORY SNOMED_CLUSTER_MANAGER_REPO TO ROLE ENGINEER;
 GRANT READ ON GIT REPOSITORY SNOMED_CLUSTER_MANAGER_REPO TO ROLE ANALYST;
 
+-- Grant write access to ENGINEER so they can fetch updates
+GRANT WRITE ON GIT REPOSITORY SNOMED_CLUSTER_MANAGER_REPO TO ROLE ENGINEER;
+
 -- =====================================================
 -- 4. Create Streamlit App from Repository
 -- =====================================================
