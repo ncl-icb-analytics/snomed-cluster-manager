@@ -316,7 +316,7 @@ def get_cluster_standardized_rates(cluster_id, cluster_type, agg_level="Borough"
             group_col = "BOROUGH_REGISTERED"
             group_label = "Borough"
         else:  # Neighbourhood
-            group_col = "PRACTICE_NEIGHBOURHOOD"
+            group_col = "NEIGHBOURHOOD_REGISTERED"
             group_label = "Neighbourhood"
         
         # Get date column name and join logic based on cluster type
@@ -592,10 +592,10 @@ def get_cluster_neighbourhood_analysis(cluster_id, cluster_type):
                 SELECT COUNT(DISTINCT person_id) AS total_count
                 FROM {DB_DEMOGRAPHICS}.DIM_PERSON_DEMOGRAPHICS 
                 WHERE is_active = true 
-                AND practice_neighbourhood IS NOT NULL
+                AND neighbourhood_registered IS NOT NULL
             )
             SELECT 
-                d.practice_neighbourhood AS NEIGHBOURHOOD,
+                d.neighbourhood_registered AS NEIGHBOURHOOD,
                 COUNT(DISTINCT d.person_id) AS PATIENT_COUNT,
                 AVG(d.age) AS AVG_AGE,
                 AVG(d.imd_decile_19) AS AVG_IMD_DECILE,
@@ -606,8 +606,8 @@ def get_cluster_neighbourhood_analysis(cluster_id, cluster_type):
             CROSS JOIN total_pop tp
             WHERE ec.cluster_id = '{cluster_id}'
             AND d.is_active = true
-            AND d.practice_neighbourhood IS NOT NULL
-            GROUP BY d.practice_neighbourhood, tp.total_count
+            AND d.neighbourhood_registered IS NOT NULL
+            GROUP BY d.neighbourhood_registered, tp.total_count
             ORDER BY PATIENT_COUNT DESC
             """
         else:  # MEDICATION
@@ -616,10 +616,10 @@ def get_cluster_neighbourhood_analysis(cluster_id, cluster_type):
                 SELECT COUNT(DISTINCT person_id) AS total_count
                 FROM {DB_DEMOGRAPHICS}.DIM_PERSON_DEMOGRAPHICS 
                 WHERE is_active = true 
-                AND practice_neighbourhood IS NOT NULL
+                AND neighbourhood_registered IS NOT NULL
             )
             SELECT 
-                d.practice_neighbourhood AS NEIGHBOURHOOD,
+                d.neighbourhood_registered AS NEIGHBOURHOOD,
                 COUNT(DISTINCT d.person_id) AS PATIENT_COUNT,
                 AVG(d.age) AS AVG_AGE,
                 AVG(d.imd_decile_19) AS AVG_IMD_DECILE,
@@ -630,8 +630,8 @@ def get_cluster_neighbourhood_analysis(cluster_id, cluster_type):
             CROSS JOIN total_pop tp
             WHERE ec.cluster_id = '{cluster_id}'
             AND d.is_active = true
-            AND d.practice_neighbourhood IS NOT NULL
-            GROUP BY d.practice_neighbourhood, tp.total_count
+            AND d.neighbourhood_registered IS NOT NULL
+            GROUP BY d.neighbourhood_registered, tp.total_count
             ORDER BY PATIENT_COUNT DESC
             """
         
