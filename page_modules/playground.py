@@ -197,10 +197,10 @@ def render_playground():
     with col3:
         st.markdown("**🔴 Advanced (Genuinely Complex)**")
         complex_examples = [
-            ("Body parts that can fracture", "< 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 125605004 |Fracture of bone|"),
-            ("All fracture sites (chained)", "<< 125605004 |Fracture of bone| . 363698007 |Finding site|"),
-            ("Medium-strength painkillers", "< 763158003 |Medicinal product| : 1142135004 |Has presentation strength value| >= #200, 1142135004 |Has presentation strength value| <= #600, 732945000 |Has presentation strength unit| = 258684004 |milligram|, 10362801000001104 |Has specific active ingredient| = << 387207008 |Ibuprofen|"),
-            ("Include inactive diabetes codes", "<< 73211009 |Diabetes mellitus| {{ +HISTORY-MAX }}")
+            ("Drug ingredients (chained)", "<< 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient|"),
+            ("Grouped fractures (CORRECT)", "<< 125605004 |Fracture of bone| : { 363698007 |Finding site| = << 272673000 |Bone structure of foot|, 116676008 |Associated morphology| = << 72704001 |Fracture| }, { 42752001 |Due to| = << 125643001 |Osteoporosis| }"),
+            ("Body parts that fracture (reverse)", "< 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 125605004 |Fracture of bone|"),
+            ("Anything causing edema (wildcard)", "* : << 47429007 |Associated with| = << 267038008 |Edema|")
         ]
         
         for name, expression in complex_examples:
@@ -271,35 +271,40 @@ def render_playground():
         ```
         """)
     
-    with st.expander("🏗️ Attribute Groups (Why They Matter)", expanded=False):
+    with st.expander("🏗️ Attribute Groups vs ANDs (CRITICAL DIFFERENCE)", expanded=False):
         st.markdown("""
         **The Problem Without Groups:**
         SNOMED concepts can have multiple relationships. Without groups, ECL can't tell which attributes go together.
 
-        **Real-World Example - Heart Problem:**
-        Imagine a patient has "Pulmonary valve stenosis with right ventricular hypertrophy"
+        **REAL Example - Osteoporotic Foot Fracture:**
+        You want: "Foot fractures caused by osteoporosis" - a specific combination.
 
-        **❌ Without groups (WRONG):**
+        **❌ WITHOUT GROUPS (DANGEROUS!):**
         ```go
-        < 404684003 |Clinical finding| :
-            363698007 |Finding site| = << 39057004 |Pulmonary valve|,
-            116676008 |Associated morphology| = << 415582006 |Stenosis|,
-            363698007 |Finding site| = << 53085002 |Right ventricle|,
-            116676008 |Associated morphology| = << 56246009 |Hypertrophy|
+        << 125605004 |Fracture of bone| :
+            363698007 |Finding site| = << 272673000 |Bone structure of foot|,
+            116676008 |Associated morphology| = << 72704001 |Fracture|,
+            42752001 |Due to| = << 125643001 |Osteoporosis|
         ```
-        This could match "Pulmonary valve hypertrophy" or "Right ventricle stenosis" - WRONG!
+        **Problem:** This could match ANY fracture that has:
+        - A foot location (from one fracture type)
+        - A fracture morphology (from another fracture type)
+        - An osteoporosis cause (from yet another fracture type)
 
-        **✅ With groups (CORRECT):**
+        Could incorrectly match "traumatic femur fracture in someone with osteoporosis history"!
+
+        **✅ WITH GROUPS (SAFE & CORRECT):**
         ```go
-        < 404684003 |Clinical finding| :
-            { 363698007 |Finding site| = << 39057004 |Pulmonary valve|,
-              116676008 |Associated morphology| = << 415582006 |Stenosis| },
-            { 363698007 |Finding site| = << 53085002 |Right ventricle|,
-              116676008 |Associated morphology| = << 56246009 |Hypertrophy| }
+        << 125605004 |Fracture of bone| :
+            { 363698007 |Finding site| = << 272673000 |Bone structure of foot|,
+              116676008 |Associated morphology| = << 72704001 |Fracture| },
+            { 42752001 |Due to| = << 125643001 |Osteoporosis| }
         ```
-        This only matches conditions with BOTH:
-        - Group 1: Pulmonary valve AND stenosis (linked together)
-        - Group 2: Right ventricle AND hypertrophy (linked together)
+        **This ensures:**
+        - Group 1: The fracture IS in the foot (site + morphology linked)
+        - Group 2: The cause IS osteoporosis (separate relationship)
+
+        **The Key Insight:** Groups mirror how SNOMED actually models complex concepts!
 
         **Simple Rule:**
         - Comma `,` = AND (within same group)
@@ -360,37 +365,69 @@ def render_playground():
         **💡 Pro Tip:** Always combine with unit attributes to avoid mixing mg with mcg!
         """)
 
-    with st.expander("⚙️ Advanced Attributes (Reverse & Chained)", expanded=False):
+    with st.expander("⚙️ Reverse Attributes (R) - Find What Points TO Something", expanded=False):
         st.markdown("""
-        **Reverse Attributes (R) - Find What Points TO Something:**
+        **The Power of Reverse Queries:**
+        Normal queries go FROM concept TO value. Reverse goes FROM value TO concept.
 
-        Normal: "Find disorders of the lung"
+        **Example 1 - Find Fracture Sites:**
+        Normal: "Find fractures of the femur"
         ```go
-        < 64572001 |Disease| : 363698007 |Finding site| = << 39607008 |Lung|
+        << 125605004 |Fracture of bone| : 363698007 |Finding site| = << 71341001 |Femur|
         ```
 
-        Reverse: "Find body parts that can have fractures"
+        Reverse: "Find body parts that can fracture"
         ```go
-        < 91723000 |Anatomical structure| :
-            R 363698007 |Finding site| = < 125605004 |Fracture of bone|
+        < 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 125605004 |Fracture of bone|
         ```
-        *"Which body parts are finding sites for fractures?"*
+        Returns: femur, radius, tibia, skull, etc. (all the bones)
 
-        **Dotted Attributes (Chaining) - Follow Relationships:**
+        **Example 2 - Find Allergy Triggers:**
         ```go
-        < 125605004 |Fracture of bone| . 363698007 |Finding site|
+        < 105590001 |Substance| : R 246075003 |Causative agent| = << 609328004 |Allergic disposition|
         ```
-        This returns the anatomical sites (not the fractures) - following the relationship chain.
+        *"What substances cause allergic reactions?"*
 
-        **Real Example - Find All Fracture Sites:**
+        **Example 3 - Find Drug Target Organs:**
         ```go
-        << 125605004 |Fracture of bone| . 363698007 |Finding site|
+        < 91723000 |Anatomical structure| : R 363701004 |Direct substance| = << 387517004 |Paracetamol|
         ```
-        Returns: femur, radius, tibia, etc. (the bones that can fracture)
+        *"Which body parts does paracetamol directly affect?"*
+        """)
 
-        **When to Use:**
-        - **Reverse (R)**: "What can be affected by X?" or "What causes Y?"
-        - **Dotted (.)**: "Show me the values of this attribute" or "Follow this relationship"
+    with st.expander("🔗 Dotted Attributes (.) - Follow The Chain", expanded=False):
+        st.markdown("""
+        **What Dotted Attributes Do:**
+        Instead of returning the original concepts, dotted attributes follow the relationship and return the TARGET values.
+
+        **Example 1 - Get All Drug Ingredients:**
+        Without dots (normal): Returns the medications
+        ```go
+        << 373873005 |Pharmaceutical product| : 127489000 |Has active ingredient| = << 387517004 |Paracetamol|
+        ```
+
+        With dots (chained): Returns the ingredients themselves
+        ```go
+        << 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient|
+        ```
+        Returns: paracetamol, ibuprofen, aspirin, etc. (the substances, not the meds)
+
+        **Example 2 - All Body Sites That Can Have Findings:**
+        ```go
+        << 404684003 |Clinical finding| . 363698007 |Finding site|
+        ```
+        Returns: heart, lung, liver, etc. (anatomical structures)
+
+        **Example 3 - Chain Multiple Relationships:**
+        ```go
+        << 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient| . 116680003 |Is a|
+        ```
+        Follow: product → ingredient → substance class
+
+        **When to Use Dots:**
+        - "Show me the VALUES of this relationship, not the source concepts"
+        - Building lists of targets (ingredients, locations, causes)
+        - Data extraction and analysis queries
         """)
     
     with st.expander("🔍 Filters & History Supplements", expanded=False):
