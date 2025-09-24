@@ -9,27 +9,53 @@ from config import STATUS_EMOJI, STALE_LABEL
 
 
 def format_time_ago(timestamp):
-    """Format timestamp as time ago (e.g., '2 hours ago')"""
+    """Format timestamp as time ago (e.g., '2 hours ago', '3 weeks ago', '5 months ago')"""
     if pd.isnull(timestamp):
         return "Unknown"
-    
+
     try:
         if isinstance(timestamp, str):
             timestamp = pd.to_datetime(timestamp)
-        
+
         now = pd.Timestamp.now()
         diff = now - timestamp
-        
-        if diff.days > 0:
-            return f"{diff.days} day{'s' if diff.days != 1 else ''} ago"
-        elif diff.seconds >= 3600:
-            hours = diff.seconds // 3600
+
+        # Calculate different time units
+        days = diff.days
+        hours = diff.seconds // 3600
+        minutes = diff.seconds // 60
+
+        # Years (approximate: 365 days)
+        if days >= 365:
+            years = days // 365
+            return f"{years} year{'s' if years != 1 else ''} ago"
+
+        # Months (approximate: 30 days)
+        elif days >= 30:
+            months = days // 30
+            return f"{months} month{'s' if months != 1 else ''} ago"
+
+        # Weeks
+        elif days >= 7:
+            weeks = days // 7
+            return f"{weeks} week{'s' if weeks != 1 else ''} ago"
+
+        # Days
+        elif days > 0:
+            return f"{days} day{'s' if days != 1 else ''} ago"
+
+        # Hours
+        elif hours > 0:
             return f"{hours} hour{'s' if hours != 1 else ''} ago"
-        elif diff.seconds >= 60:
-            minutes = diff.seconds // 60
+
+        # Minutes
+        elif minutes > 0:
             return f"{minutes} minute{'s' if minutes != 1 else ''} ago"
+
+        # Just now
         else:
             return "Just now"
+
     except Exception:
         return "Unknown"
 
