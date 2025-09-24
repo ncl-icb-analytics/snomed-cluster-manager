@@ -10,26 +10,32 @@ from services.cluster_service import test_ecl_expression, create_new_cluster
 def render_create():
     """Render the Create New Cluster page"""
     st.title("✨ Create New Cluster")
-    
+
     col1, col2 = st.columns([1, 6])
     with col1:
         if st.button("← Back", use_container_width=True):
             st.session_state.page = 'home'
+            # Clear form state when going back
+            for key in ['form_cluster_id', 'form_description', 'form_ecl', 'form_cluster_type']:
+                if key in st.session_state:
+                    del st.session_state[key]
             rerun()
-    
-    # Check for quick create from playground
+
+    # Check for quick create from playground or use persistent form state
     quick_create = st.session_state.get("quick_create")
     if quick_create:
-        default_cluster_id = quick_create["cluster_id"]
-        default_description = quick_create["description"]
-        default_ecl = quick_create["ecl_expression"]
-        default_cluster_type = quick_create.get("cluster_type", "OBSERVATION")
+        # Set form state from playground
+        st.session_state.form_cluster_id = quick_create["cluster_id"]
+        st.session_state.form_description = quick_create["description"]
+        st.session_state.form_ecl = quick_create["ecl_expression"]
+        st.session_state.form_cluster_type = quick_create.get("cluster_type", "OBSERVATION")
         del st.session_state["quick_create"]
-    else:
-        default_cluster_id = ""
-        default_description = ""
-        default_ecl = ""
-        default_cluster_type = "OBSERVATION"
+
+    # Get form values from session state or defaults
+    default_cluster_id = st.session_state.get("form_cluster_id", "")
+    default_description = st.session_state.get("form_description", "")
+    default_ecl = st.session_state.get("form_ecl", "")
+    default_cluster_type = st.session_state.get("form_cluster_type", "OBSERVATION")
     
     # Form
     with st.form("create_cluster_form"):
@@ -72,6 +78,12 @@ def render_create():
             submit_clicked = st.form_submit_button("🚀 Create Cluster", type="primary", use_container_width=True)
         
         if submit_clicked:
+            # Save form values to session state to persist across form submissions
+            st.session_state.form_cluster_id = cluster_id
+            st.session_state.form_description = description
+            st.session_state.form_ecl = ecl_expression
+            st.session_state.form_cluster_type = cluster_type
+
             # Validation
             errors = []
             if not cluster_id:
@@ -80,7 +92,7 @@ def render_create():
                 errors.append("Description is required")
             if not ecl_expression.strip():
                 errors.append("ECL Expression is required")
-            
+
             if errors:
                 for error in errors:
                     st.error(f"❌ {error}")
@@ -97,6 +109,10 @@ def render_create():
                     # Create cluster
                     with st.spinner("Creating cluster..."):
                         if create_new_cluster(cluster_id, ecl_expression.strip(), description, cluster_type):
+                            # Clear form state after successful creation
+                            for key in ['form_cluster_id', 'form_description', 'form_ecl', 'form_cluster_type']:
+                                if key in st.session_state:
+                                    del st.session_state[key]
                             st.session_state["flash"] = ("success", f"✅ Cluster '{cluster_id}' created successfully!")
                             st.session_state.selected_cluster = cluster_id
                             st.session_state.page = 'details'

@@ -102,24 +102,37 @@ def normalize_whitespace(text: str) -> str:
 
 
 def format_ecl_for_display(ecl_expression: str) -> str:
-    """Format ECL expression for display with proper line breaks"""
+    """Format ECL expression for display with proper line breaks (ignores content inside |display terms|)"""
     if not ecl_expression:
         return ""
-    
+
     ecl_expression = ecl_expression.strip()
-    
+
+    # Temporarily replace display terms to protect them from formatting
+    display_terms = []
+    def replace_display_term(match):
+        display_terms.append(match.group(0))
+        return f"__DISPLAY_TERM_{len(display_terms)-1}__"
+
+    # Extract and protect display terms
+    ecl_expression = re.sub(r'\|[^|]*\|', replace_display_term, ecl_expression)
+
     # Add line breaks before major operators for readability
     ecl_expression = re.sub(r'\s+(AND|OR|MINUS)\s+', r'\n\1 ', ecl_expression)
-    
+
     # Add line breaks after opening parentheses in complex expressions
     ecl_expression = re.sub(r'\(\s*(\*|<<|<)', r'(\n  \1', ecl_expression)
-    
-    # Add line breaks before closing parentheses
+
+    # Add line breaks before closing parentheses (now safe from display terms)
     ecl_expression = re.sub(r'\s*\)', r'\n)', ecl_expression)
-    
+
     # Clean up excessive whitespace
     ecl_expression = re.sub(r'\n\s*\n', '\n', ecl_expression)
-    
+
+    # Restore display terms
+    for i, display_term in enumerate(display_terms):
+        ecl_expression = ecl_expression.replace(f"__DISPLAY_TERM_{i}__", display_term)
+
     return ecl_expression
 
 
