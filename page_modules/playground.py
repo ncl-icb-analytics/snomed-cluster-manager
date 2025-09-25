@@ -198,7 +198,7 @@ def render_playground():
         st.markdown("**🔴 Advanced (Genuinely Complex)**")
         complex_examples = [
             ("Drug ingredients (chained)", "<< 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient|"),
-            ("Grouped fractures (CORRECT)", "<< 125605004 |Fracture of bone| : { 363698007 |Finding site| = << 272673000 |Bone structure of foot|, 116676008 |Associated morphology| = << 72704001 |Fracture| }, { 42752001 |Due to| = << 125643001 |Osteoporosis| }"),
+            ("Viral lung infections (grouped)", "<< 40733004 |Infectious disease| : { 246075003 |Causative agent| = << 49872002 |Virus|, 363698007 |Finding site| = << 39607008 |Lung| }"),
             ("Body parts that fracture (reverse)", "< 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 125605004 |Fracture of bone|"),
             ("Anything causing edema (wildcard)", "* : << 47429007 |Associated with| = << 267038008 |Edema|")
         ]
@@ -271,40 +271,35 @@ def render_playground():
         ```
         """)
     
-    with st.expander("🏗️ Attribute Groups vs ANDs (CRITICAL DIFFERENCE)", expanded=False):
+    with st.expander("🏗️ Attribute Groups vs ANDs (When Groups Matter)", expanded=False):
         st.markdown("""
         **The Problem Without Groups:**
         SNOMED concepts can have multiple relationships. Without groups, ECL can't tell which attributes go together.
 
-        **REAL Example - Osteoporotic Foot Fracture:**
-        You want: "Foot fractures caused by osteoporosis" - a specific combination.
+        **REAL Example - Viral Lung Infections:**
+        You want: "Lung infections caused by viruses" - both attributes must be linked together.
 
-        **❌ WITHOUT GROUPS (DANGEROUS!):**
+        **Without Groups (Less Precise):**
         ```go
-        << 125605004 |Fracture of bone| :
-            363698007 |Finding site| = << 272673000 |Bone structure of foot|,
-            116676008 |Associated morphology| = << 72704001 |Fracture|,
-            42752001 |Due to| = << 125643001 |Osteoporosis|
+        << 40733004 |Infectious disease| :
+            246075003 |Causative agent| = << 49872002 |Virus|,
+            363698007 |Finding site| = << 39607008 |Lung|
         ```
-        **Problem:** This could match ANY fracture that has:
-        - A foot location (from one fracture type)
-        - A fracture morphology (from another fracture type)
-        - An osteoporosis cause (from yet another fracture type)
+        **Issue:** This could match infectious diseases that have:
+        - A viral cause (from one infection type)
+        - A lung location (from a different infection type)
 
-        Could incorrectly match "traumatic femur fracture in someone with osteoporosis history"!
+        May include unintended matches like bacterial lung infections with viral components.
 
-        **✅ WITH GROUPS (SAFE & CORRECT):**
+        **With Groups (More Precise):**
         ```go
-        << 125605004 |Fracture of bone| :
-            { 363698007 |Finding site| = << 272673000 |Bone structure of foot|,
-              116676008 |Associated morphology| = << 72704001 |Fracture| },
-            { 42752001 |Due to| = << 125643001 |Osteoporosis| }
+        << 40733004 |Infectious disease| :
+            { 246075003 |Causative agent| = << 49872002 |Virus|,
+              363698007 |Finding site| = << 39607008 |Lung| }
         ```
-        **This ensures:**
-        - Group 1: The fracture IS in the foot (site + morphology linked)
-        - Group 2: The cause IS osteoporosis (separate relationship)
+        **Result:** This ensures the viral agent and lung location are linked together in the same relationship group.
 
-        **The Key Insight:** Groups mirror how SNOMED actually models complex concepts!
+        **Key Point:** Groups reflect how SNOMED models complex concepts with multiple related attributes.
 
         **Simple Rule:**
         - Comma `,` = AND (within same group)
@@ -388,11 +383,11 @@ def render_playground():
         ```
         *"What substances cause allergic reactions?"*
 
-        **Example 3 - Find Drug Target Organs:**
+        **Example 3 - Find Disorder Sites:**
         ```go
-        < 91723000 |Anatomical structure| : R 363701004 |Direct substance| = << 387517004 |Paracetamol|
+        < 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 64572001 |Disease|
         ```
-        *"Which body parts does paracetamol directly affect?"*
+        *"What body parts can have diseases?"*
         """)
 
     with st.expander("🔗 Dotted Attributes (.) - Follow The Chain", expanded=False):
@@ -418,11 +413,11 @@ def render_playground():
         ```
         Returns: heart, lung, liver, etc. (anatomical structures)
 
-        **Example 3 - Chain Multiple Relationships:**
+        **Example 3 - Find Fracture Locations:**
         ```go
-        << 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient| . 116680003 |Is a|
+        << 125605004 |Fracture of bone| . 363698007 |Finding site|
         ```
-        Follow: product → ingredient → substance class
+        Returns: femur, radius, tibia, etc. (the anatomical sites where fractures occur)
 
         **When to Use Dots:**
         - "Show me the VALUES of this relationship, not the source concepts"
