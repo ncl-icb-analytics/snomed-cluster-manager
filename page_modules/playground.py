@@ -167,7 +167,7 @@ def render_playground():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("**🟢 Basic (Hierarchy)**")
+        st.markdown("**🟢 Basic**")
         basic_examples = [
             ("Type 2 Diabetes", "<<44054006 |Type 2 diabetes mellitus|"),
             ("Hypertension", "<< 38341003 |Hypertensive disorder, systemic arterial|"),
@@ -181,7 +181,7 @@ def render_playground():
                 rerun()
     
     with col2:
-        st.markdown("**🟡 Intermediate (Operators & Refinements)**")
+        st.markdown("**🟡 Intermediate**")
         refined_examples = [
             ("Diabetes excl. gestational", "<< 73211009 |Diabetes mellitus| MINUS << 11687002 |Gestational diabetes mellitus|"),
             ("Reference set members", "^ 999002381000000108 |Safeguarding issues simple reference set|"),
@@ -195,7 +195,7 @@ def render_playground():
                 rerun()
     
     with col3:
-        st.markdown("**🔴 Advanced (Genuinely Complex)**")
+        st.markdown("**🔴 Advanced**")
         complex_examples = [
             ("Drug ingredients (chained)", "<< 373873005 |Pharmaceutical product| . 127489000 |Has active ingredient|"),
             ("Viral lung infections (grouped)", "<< 40733004 |Infectious disease| : { 246075003 |Causative agent| = << 49872002 |Virus|, 363698007 |Finding site| = << 39607008 |Lung| }"),
@@ -276,28 +276,28 @@ def render_playground():
         **The Problem Without Groups:**
         SNOMED concepts can have multiple relationships. Without groups, ECL can't tell which attributes go together.
 
-        **REAL Example - Viral Lung Infections:**
+        **Real Example - Viral Lung Infections:**
         You want: "Lung infections caused by viruses" - both attributes must be linked together.
 
-        **Without Groups (Less Precise):**
+        **Without Groups (Returns 45 results - includes false positives):**
         ```go
         << 40733004 |Infectious disease| :
             246075003 |Causative agent| = << 49872002 |Virus|,
             363698007 |Finding site| = << 39607008 |Lung|
         ```
-        **Issue:** This could match infectious diseases that have:
-        - A viral cause (from one infection type)
-        - A lung location (from a different infection type)
+        **Issue:** Matches ANY infectious disease with:
+        - A viral component somewhere in its model AND
+        - A lung component somewhere in its model
 
-        May include unintended matches like bacterial lung infections with viral components.
+        This incorrectly includes bacterial/fungal pneumonias in HIV patients, where the viral component (HIV) is unrelated to the lung infection.
 
-        **With Groups (More Precise):**
+        **With Groups (Returns 37 results - precise matches only):**
         ```go
         << 40733004 |Infectious disease| :
             { 246075003 |Causative agent| = << 49872002 |Virus|,
               363698007 |Finding site| = << 39607008 |Lung| }
         ```
-        **Result:** This ensures the viral agent and lung location are linked together in the same relationship group.
+        **Result:** Only matches diseases where the viral agent and lung location are actually linked together in the same relationship group.
 
         **Key Point:** Groups reflect how SNOMED models complex concepts with multiple related attributes.
 
@@ -383,11 +383,11 @@ def render_playground():
         ```
         *"What substances cause allergic reactions?"*
 
-        **Example 3 - Find Disorder Sites:**
+        **Example 3 - Find Cancer Sites:**
         ```go
-        < 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 64572001 |Disease|
+        < 91723000 |Anatomical structure| : R 363698007 |Finding site| = << 363346000 |Malignant neoplastic disease|
         ```
-        *"What body parts can have diseases?"*
+        *"What body parts can have cancers?"*
         """)
 
     with st.expander("🔗 Dotted Attributes (.) - Follow The Chain", expanded=False):
